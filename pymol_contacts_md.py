@@ -81,7 +81,7 @@ def create_contact(atoms_contacts, pattern):
     """
     Create the contact between the two atoms of the residues.
 
-    :param atoms_contacts: The list of atoms' contacts.
+    :param atoms_contacts: The atoms' contacts.
     :type atoms_contacts: str
     :param pattern: the pattern of the contact.
     :type pattern: re.pattern
@@ -89,7 +89,7 @@ def create_contact(atoms_contacts, pattern):
     :rtype: int
     """
     number_contacts = 0
-    for atom_contact in atoms_contacts.split(" "):
+    for atom_contact in atoms_contacts.split(";"):
         match = pattern.search(atom_contact)
         if match:
             resi_1 = match.group(1)
@@ -101,11 +101,11 @@ def create_contact(atoms_contacts, pattern):
         p1 = pymol.cmd.select("p1", f"(resi {resi_1} and name {atom_1})")
         p2 = pymol.cmd.select("p2", f"(resi {resi_2} and name {atom_2})")
         if p1 != 1:
-            raise Exception(f"create_contact function, CMD for p1 selection failed: select resi {resi_1} and name "
-                            f"{atom_1}.")
+            raise Exception(f"create_contact function on {atom_contact}, CMD for p1 selection failed: select "
+                            f"resi {resi_1} and name {atom_1}.")
         if p2 != 1:
-            raise Exception(f"create_contact function, CMD for p2 selection failed: select resi {resi_2} and name "
-                            f"{atom_2}.")
+            raise Exception(f"create_contact function on {atom_contact}, CMD for p2 selection failed: select "
+                            f"resi {resi_2} and name {atom_2}.")
         pymol.cmd.distance(atom_contact, "p1", "p2")
         pymol.cmd.hide("labels", atom_contact)
         pymol.cmd.delete("p1")
@@ -191,9 +191,9 @@ if __name__ == "__main__":
         nb_initial_contacts += row["number atoms contacts"]
         if roi and (int(row["first partner position"]) < roi[0] or int(row["first partner position"]) > roi[1]):
             nb_out_roi += row["number atoms contacts"]
-            logging.debug(f"{row['contact']}: {row['number atoms contacts']} contacts excluded because the first partner "
-                          f"position ({row['first partner position']}) is outside the Region Of Interest limits: "
-                          f"{args.roi}.")
+            logging.debug(f"{row['residues in contact']}: {row['number atoms contacts']} contacts excluded because the "
+                          f"first partner position ({row['first partner position']}) is outside the Region Of Interest "
+                          f"limits: {args.roi}.")
             continue
         if excluded_domains and row["second partner domain"].lower() in excluded_domains:
             nb_excluded_contacts += row["number atoms contacts"]
@@ -201,6 +201,7 @@ if __name__ == "__main__":
                           f"domain ({row['second partner domain']}) is in the list of the excluded domains.")
             continue
         # change the representation of the two residues which atoms are in contact to licorice
+        logging.debug(f"contact added: {row}")
         pymol.cmd.select("tmp", f"resi {row['first partner position']} or resi {row['second partner position']}")
         pymol.cmd.show(representation="licorice", selection="tmp")
         pymol.cmd.delete("tmp")
