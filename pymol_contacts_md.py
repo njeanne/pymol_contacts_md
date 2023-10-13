@@ -95,19 +95,33 @@ def create_contact(atoms_contacts, pattern):
             resi_1 = match.group(1)
             atom_1 = match.group(2)
             resi_2 = match.group(3)
-            atom_2 = match.group(4)
+            atom_2_second = match.group(4)
+            atom_2_first = match.group(5)
         else:
             raise(Exception(f"No match in {atom_contact} for '{pattern.pattern}'."))
+        downgraded_contact = False
         p1 = pymol.cmd.select("p1", f"(resi {resi_1} and name {atom_1})")
-        p2 = pymol.cmd.select("p2", f"(resi {resi_2} and name {atom_2})")
+        p2 = pymol.cmd.select("p2", f"(resi {resi_2} and name {atom_2_first})")
         if p1 != 1:
-            raise Exception(f"create_contact function on {atom_contact}, CMD for p1 selection failed: select "
-                            f"resi {resi_1} and name {atom_1}.")
+            raise Exception(f"create_contact function on {atom_contact}: PyMol command for p2 selection on "
+                            f"{resi_1}_{atom_1} failed (select resi {resi_1} and name {atom_1}).")
         if p2 != 1:
-            raise Exception(f"create_contact function on {atom_contact}, CMD for p2 selection failed: select "
-                            f"resi {resi_2} and name {atom_2}.")
+            downgraded_contact = True
+            logging.warning(f"create_contact function on {atom_contact}: PyMol command for p2 selection on "
+                            f"{resi_2}_{atom_2_first} failed (select resi {resi_2} and name {atom_2_first}), trying on "
+                            f"{resi_2}_{atom_2_second}.")
+            p2 = pymol.cmd.select("p2", f"(resi {resi_2} and name {atom_2_second})")
+            if p2 != 1:
+                raise Exception(f"create_contact function on {atom_contact}: PyMol commands for p2 selection failed:\n"
+                                f"select resi {resi_2} and name {atom_2_first}\n"
+                                f"select resi {resi_2} and name {atom_2_second}")
         pymol.cmd.distance(atom_contact, "p1", "p2")
         pymol.cmd.hide("labels", atom_contact)
+        if downgraded_contact:
+            pymol.cmd.color("red", atom_contact)
+            logging.warning(f"{atom_contact}: Downgraded contact between '{resi_1}_{atom_1} and "
+                            f"{resi_2}_{atom_2_second}' instead of '{resi_1}_{atom_1} and {resi_2}_{atom_2_first}' set "
+                            f"to red color instead of yellow.")
         pymol.cmd.delete("p1")
         pymol.cmd.delete("p2")
         number_contacts += 1
@@ -180,7 +194,7 @@ if __name__ == "__main__":
         excluded_domains = [item.strip().lower() for item in args.exclude_domains]
 
     contacts = pandas.read_csv(args.input, sep=",")
-    pattern_contact = re.compile("\\D{3}(\\d+)_(\\S+?)-\\D{3}(\\d+)_.+-(\\S+)")
+    pattern_contact = re.compile("\\D{3}(\\d+)_(\\S+?)-\\D{3}(\\d+)_(.+)-(\\S+)")
     pymol.cmd.load(args.structure)
     nb_initial_contacts = 0
     nb_validated_contacts = 0
@@ -189,20 +203,20 @@ if __name__ == "__main__":
     nb_out_roi = 0
     for _, row in contacts.iterrows():
         nb_initial_contacts += row["number atoms contacts"]
-        if roi and (int(row["first partner position"]) < roi[0] or int(row["first partner position"]) > roi[1]):
+        if roi and (int(row["ROI partner position"]) < roi[0] or int(row["ROI partner position"]) > roi[1]):
             nb_out_roi += row["number atoms contacts"]
             logging.debug(f"{row['residues in contact']}: {row['number atoms contacts']} contacts excluded because the "
-                          f"first partner position ({row['first partner position']}) is outside the Region Of Interest "
+                          f"ROI partner position ({row['ROI partner position']}) is outside the Region Of Interest "
                           f"limits: {args.roi}.")
             continue
         if excluded_domains and row["second partner domain"].lower() in excluded_domains:
             nb_excluded_contacts += row["number atoms contacts"]
-            logging.debug(f"{row['contact']}: {row['number atoms contacts']} contacts excluded because the second partner "
-                          f"domain ({row['second partner domain']}) is in the list of the excluded domains.")
+            logging.debug(f"{row['contact']}: {row['number atoms contacts']} contacts excluded because the second "
+                          f"partner domain ({row['second partner domain']}) is in the list of the excluded domains.")
             continue
         # change the representation of the two residues which atoms are in contact to licorice
         logging.debug(f"contact added: {row}")
-        pymol.cmd.select("tmp", f"resi {row['first partner position']} or resi {row['second partner position']}")
+        pymol.cmd.select("tmp", f"resi {row['ROI partner position']} or resi {row['second partner position']}")
         pymol.cmd.show(representation="licorice", selection="tmp")
         pymol.cmd.delete("tmp")
         # create the contact
@@ -213,8 +227,8 @@ if __name__ == "__main__":
             sys.exit(1)
         nb_validated_residues_pairs += 1
     if nb_out_roi != 0:
-        logging.warning(f"{nb_out_roi} contacts excluded because the first partner position was "
-                        f"outside of the Region Of Interest limits: {args.roi}")
+        logging.warning(f"{nb_out_roi} contacts excluded because the ROI partner position was outside of the Region Of "
+                        f"Interest limits: {args.roi}")
     if nb_excluded_contacts != 0:
         logging.warning(f"{nb_excluded_contacts} contacts excluded because the second partner domain was one of the "
                         f"excluded domains: {', '.join(excluded_domains)}.")
