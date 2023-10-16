@@ -152,6 +152,12 @@ if __name__ == "__main__":
                         help="the 'first partner position' Region Of Interest coordinates, the position must belong to "
                              "this interval to be added as a contact. The format should be two digits separated by an "
                              "hyphen, i.e: '100-200'.")
+    parser.add_argument("-d", "--domains", required=False, type=str, default="",
+                        help="the path to the CSV file to annotate the protein domains. The domains file is a comma "
+                             "separated file, with a column named 'domain' which contains the domains names, two  "
+                             "columns respectively called 'start' and 'end' with the 1-indexed coordinates of each "
+                             "domain. And finally a column called 'pymol color' with the name of the color as "
+                             "described here: https://pymolwiki.org/index.php/Color_Values")
     parser.add_argument("-e", "--exclude-domains", required=False, nargs="+",
                         help="the list of domains to exclude in the contacts. A list of domains names as they appear "
                              "in the 'second partner domain'. The arguments must be separated by spaces and if their "
@@ -189,13 +195,26 @@ if __name__ == "__main__":
             logging.error(exc)
             sys.exit(1)
 
-    excluded_domains = None
+    excluded_domains_in_contacts = None
     if args.exclude_domains:
-        excluded_domains = [item.strip().lower() for item in args.exclude_domains]
+        excluded_domains_in_contacts = [item.strip().lower() for item in args.exclude_domains]
 
     contacts = pandas.read_csv(args.input, sep=",")
     pattern_contact = re.compile("\\D{3}(\\d+)_(\\S+?)-\\D{3}(\\d+)_(.+)-(\\S+)")
     pymol.cmd.load(args.structure)
+
+    domains_data = None
+    if args.domains:
+        logging.info(f"Coloring the protein domains using the file: {args.domains}")
+        try:
+            domains_data = pandas.read_csv(args.domains)
+            for _, row in domains_data.iterrows():
+                pymol.cmd.select(row["domain"].replace(" ", "_"), f"resi {row['start']}:{row['end']}")
+                color_domain = pymol.cmd.color(row["pymol color"], f"resi {row['start']}:{row['end']}")
+        except FileNotFoundError as exc:
+            logging.error(exc)
+            sys.exit(1)
+
     nb_initial_contacts = 0
     nb_validated_contacts = 0
     nb_validated_residues_pairs = 0
@@ -209,7 +228,7 @@ if __name__ == "__main__":
                           f"ROI partner position ({row['ROI partner position']}) is outside the Region Of Interest "
                           f"limits: {args.roi}.")
             continue
-        if excluded_domains and row["second partner domain"].lower() in excluded_domains:
+        if excluded_domains_in_contacts and row["second partner domain"].lower() in excluded_domains_in_contacts:
             nb_excluded_contacts += row["number atoms contacts"]
             logging.debug(f"{row['contact']}: {row['number atoms contacts']} contacts excluded because the second "
                           f"partner domain ({row['second partner domain']}) is in the list of the excluded domains.")
@@ -231,7 +250,7 @@ if __name__ == "__main__":
                         f"Interest limits: {args.roi}")
     if nb_excluded_contacts != 0:
         logging.warning(f"{nb_excluded_contacts} contacts excluded because the second partner domain was one of the "
-                        f"excluded domains: {', '.join(excluded_domains)}.")
+                        f"excluded domains: {', '.join(excluded_domains_in_contacts)}.")
     logging.info(f"{nb_validated_contacts}/{nb_initial_contacts} contacts added for "
                  f"{nb_validated_residues_pairs}/{len(contacts)} pairs of residues.")
     out = f"{os.path.abspath(args.prefix)}.pse"
