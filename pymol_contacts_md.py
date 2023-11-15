@@ -212,7 +212,6 @@ if __name__ == "__main__":
             domains_data = pandas.read_csv(args.domains)
             for _, row in domains_data.iterrows():
                 pymol.cmd.select(row["domain"].replace(" ", "_"), f"resi {row['start']}:{row['end']}")
-                # color_domain = pymol.cmd.color(row["pymol color"], f"resi {row['start']}:{row['end']}")
                 pymol.cmd.color(row["pymol color"], f"resi {row['start']}:{row['end']}")
         except FileNotFoundError as exc:
             logging.error(exc)
