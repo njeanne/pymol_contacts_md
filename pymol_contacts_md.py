@@ -202,6 +202,8 @@ if __name__ == "__main__":
     contacts = pandas.read_csv(args.input, sep=",")
     pattern_contact = re.compile("\\D{3}(\\d+)_(\\S+?)-\\D{3}(\\d+)_(.+)-(\\S+)")
     pymol.cmd.load(args.structure)
+    # set the protein to white color
+    pymol.cmd.color("white", "all")
 
     domains_data = None
     if args.domains:
@@ -210,7 +212,8 @@ if __name__ == "__main__":
             domains_data = pandas.read_csv(args.domains)
             for _, row in domains_data.iterrows():
                 pymol.cmd.select(row["domain"].replace(" ", "_"), f"resi {row['start']}:{row['end']}")
-                color_domain = pymol.cmd.color(row["pymol color"], f"resi {row['start']}:{row['end']}")
+                # color_domain = pymol.cmd.color(row["pymol color"], f"resi {row['start']}:{row['end']}")
+                pymol.cmd.color(row["pymol color"], f"resi {row['start']}:{row['end']}")
         except FileNotFoundError as exc:
             logging.error(exc)
             sys.exit(1)
