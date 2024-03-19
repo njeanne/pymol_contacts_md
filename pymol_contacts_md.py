@@ -16,7 +16,7 @@ import pymol
 __author__ = "Nicolas JEANNE"
 __copyright__ = "GNU General Public License"
 __email__ = "jeanne.n@chu-toulouse.fr"
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 def create_log(path, level):
@@ -89,7 +89,7 @@ def create_contact(atoms_contacts, pattern):
     :rtype: int
     """
     number_contacts = 0
-    for atom_contact in atoms_contacts.split(";"):
+    for atom_contact in atoms_contacts.split(" | "):
         match = pattern.search(atom_contact)
         if match:
             resi_1 = match.group(1)
@@ -110,7 +110,8 @@ def create_contact(atoms_contacts, pattern):
             logging.warning(f"create_contact function on {atom_contact}: PyMol command for p2 selection on "
                             f"{resi_2}_{atom_2_first} failed (select resi {resi_2} and name {atom_2_first}), trying on "
                             f"{resi_2}_{atom_2_second}.")
-            p2 = pymol.cmd.select("p2", f"(resi {resi_2} and name {atom_2_second})")
+            p2_sel_str = f"(resi {resi_2} and name {atom_2_second})"
+            p2 = pymol.cmd.select("p2", p2_sel_str)
             if p2 != 1:
                 raise Exception(f"create_contact function on {atom_contact}: PyMol commands for p2 selection failed:\n"
                                 f"select resi {resi_2} and name {atom_2_first}\n"

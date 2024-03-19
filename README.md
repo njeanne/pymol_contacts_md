@@ -16,6 +16,10 @@ conda conda_env create -f conda_env/pymol_contacts_md_md_env.yml
 
 The example files provided in the `data` directory can be used to test the script.
 
+**Important**: In the input CSV data file, when in a row representing the contacts between 2 residues, multiple contacts are recorded 
+between the atoms of the 2 residues, the contacts in the column `atoms contacts` must be separated by a "` | `" 
+character with a space on each side.
+
 ## Basic usage
 
 The basic usage is:
