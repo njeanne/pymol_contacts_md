@@ -9,7 +9,7 @@ with [PyMol](https://github.com/schrodinger/pymol-open-source).
 A [Conda](https://docs.conda.io/en/latest/) environment is provided in the `env` directory and can be loaded with the
 command:
 ```shell
-conda conda_env create -f conda_env/pymol_contacts_md_md_env.yml
+conda conda_env create -f conda_env/pymol_contacts_md_env.yml
 ```
 
 # Usage
