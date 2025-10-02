@@ -16,7 +16,7 @@ import pymol
 __author__ = "Nicolas JEANNE"
 __copyright__ = "GNU General Public License"
 __email__ = "jeanne.n@chu-toulouse.fr"
-__version__ = "1.0.1"
+__version__ = "1.1.0"
 
 
 def create_log(path, level):
