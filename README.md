@@ -27,7 +27,7 @@ The basic usage is:
 conda activate pymol_contacts_md
 
 ./pymol_contacts_md.py --prefix results/contacts --structure data/JQ679013_RPS17_ORF1_0.pse \
-data/outliers_JQ679013_RPS17_ORF1.csv
+data/hydrogen-bonds_JQ679013_RPS17_ORF1.csv
 
 conda deactivate
 ```
@@ -46,7 +46,7 @@ exclude the Hinge and the X domain, the command will be:
 conda activate pymol_contacts_md
 
 ./pymol_contacts_md.py --prefix results/contacts_no-hinge-xdomain --exclude-domains Hinge "X domain" \
---structure data/JQ679013_RPS17_ORF1_0.pse data/outliers_JQ679013_RPS17_ORF1.csv
+--structure data/JQ679013_RPS17_ORF1_0.pse data/hydrogen-bonds_JQ679013_RPS17_ORF1.csv
 
 conda deactivate
 ```
@@ -65,7 +65,7 @@ Here, we target an insertion which coordinates are amino acid 748 to 806:
 conda activate pymol_contacts_md
 
 ./pymol_contacts_md.py --prefix results/contacts_roi-748-806 --roi 748-806 \
---structure data/JQ679013_RPS17_ORF1_0.pse data/outliers_JQ679013_RPS17_ORF1.csv
+--structure data/JQ679013_RPS17_ORF1_0.pse data/hydrogen-bonds_JQ679013_RPS17_ORF1.csv
 
 conda deactivate
 ```

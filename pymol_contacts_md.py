@@ -140,15 +140,15 @@ if __name__ == "__main__":
     Distributed on an "AS IS" basis without warranties or conditions of any kind, either express or
     implied.
 
-    Add to a structure file of a protein the contacts discovered by the plot_contacts.py script 
-    (https://github.com/njeanne/plot_contacts).
+    Add to a structure file of a protein the contacts discovered by the plot_hbonds.py script 
+    (https://github.com/njeanne/plot_hbonds) or by the plot_neighbors.py script (https://github.com/njeanne/plot_neighbors).
     """
     parser = argparse.ArgumentParser(description=descr, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-p", "--prefix", required=True, type=str,
-                        help="the prefix of the path to the PyMol file. A '.pse' extension will be added to this "
+                        help="the prefix of the path to the PyMol file. A \".pse\" extension will be added to this "
                              "prefix.")
     parser.add_argument("-s", "--structure", required=True, type=str,
-                        help="the protein structure file, it can be '.pse', '.pdb'.")
+                        help="the protein structure file, it can be \".pse\", '.pdb'.")
     parser.add_argument("-r", "--roi", required=False, type=str,
                         help="the 'first partner position' Region Of Interest coordinates, the position must belong to "
                              "this interval to be added as a contact. The format should be two digits separated by an "
@@ -233,7 +233,7 @@ if __name__ == "__main__":
             continue
         if excluded_domains_in_contacts and row["second partner domain"].lower() in excluded_domains_in_contacts:
             nb_excluded_contacts += row["number atoms contacts"]
-            logging.debug(f"{row['contact']}: {row['number atoms contacts']} contacts excluded because the second "
+            logging.debug(f"{row['residues contact']}: {row['number atoms contacts']} contacts excluded because the second "
                           f"partner domain ({row['second partner domain']}) is in the list of the excluded domains.")
             continue
         # change the representation of the two residues which atoms are in contact to licorice
