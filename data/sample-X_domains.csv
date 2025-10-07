@@ -1,0 +1,8 @@
+domain,start,end,color,pymol color
+MetY,1,506,#0000b6,blue
+FABD-like,515,707,#02eded,green
+PPR,708,849,#ab0000,red
+RPS17 insertion,748,806,#ad4a63,raspberry
+Macro Domain,850,998,#e1e100,cyan
+Helicase,1002,1279,#e77504,orange
+RdRp,1298,1765,#7a147a,magenta
