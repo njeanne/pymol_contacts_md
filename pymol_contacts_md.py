@@ -215,6 +215,19 @@ if __name__ == "__main__":
             logging.error(exc)
             sys.exit(1)
 
+    excluded_domains_in_contacts = None
+    domains = [x.lower() for x in domains_data["domain"].tolist()]
+    idx_domains_error = []
+    if args.exclude_domains:
+        excluded_domains_in_contacts = [item.strip().lower() for item in args.exclude_domains]
+        for idx in range(len(excluded_domains_in_contacts)):
+            if excluded_domains_in_contacts[idx] not in domains:
+                idx_domains_error.append(idx)
+    for idx in reversed(idx_domains_error):
+        del excluded_domains_in_contacts[idx]
+        logging.warning(f"Ignored excluded domain \"{args.exclude_domains.pop(idx)}\". The domain is not present in "
+                        f"the file --domains {args.domains}")
+
     nb_initial_contacts = 0
     nb_validated_contacts = 0
     nb_validated_residues_pairs = 0
