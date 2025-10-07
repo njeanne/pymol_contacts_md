@@ -140,8 +140,9 @@ if __name__ == "__main__":
     Distributed on an "AS IS" basis without warranties or conditions of any kind, either express or
     implied.
 
-    Add to a structure file of a protein the contacts discovered by the plot_hbonds.py script 
-    (https://github.com/njeanne/plot_hbonds) or by the plot_neighbors.py script (https://github.com/njeanne/plot_neighbors).
+    Add to a structure file of a protein the contacts discovered by the plot_hbonds.py 
+    (https://github.com/njeanne/plot_hbonds) or by the plot_neighbors.py scripts 
+    (https://github.com/njeanne/plot_neighbors).
     """
     parser = argparse.ArgumentParser(description=descr, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-p", "--prefix", required=True, type=str,
@@ -150,8 +151,8 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--structure", required=True, type=str,
                         help="the protein structure file, it can be \".pse\", '.pdb'.")
     parser.add_argument("-r", "--roi", required=False, type=str,
-                        help="the 'first partner position' Region Of Interest coordinates, the position must belong to "
-                             "this interval to be added as a contact. The format should be two digits separated by an "
+                        help="the Region Of Interest coordinates, the  \"residue 1 position\" must belong to this "
+                             "interval to be added as a contact. The format must be two digits separated by an "
                              "hyphen, i.e: '100-200'.")
     parser.add_argument("-d", "--domains", required=False, type=str, default="",
                         help="the path to the CSV file to annotate the protein domains. The domains file is a comma "
@@ -161,8 +162,8 @@ if __name__ == "__main__":
                              "described here: https://pymolwiki.org/index.php/Color_Values")
     parser.add_argument("-e", "--exclude-domains", required=False, nargs="+",
                         help="the list of domains to exclude in the contacts. A list of domains names as they appear "
-                             "in the 'second partner domain'. The arguments must be separated by spaces and if their "
-                             "names contains spaces, they must be surrounded by '\"', in example: Hinge \"X domain\".")
+                             "in the \"residue 2 domain\". The arguments must be separated by spaces and if their "
+                             "names contains spaces, they must be surrounded by '\"', in example: PPR \"X domain\".")
     parser.add_argument("-l", "--log", required=False, type=str,
                         help=("the path for the log file. If this option is  skipped, the log file is created in the "
                               "output directory."))
@@ -196,10 +197,6 @@ if __name__ == "__main__":
             logging.error(exc)
             sys.exit(1)
 
-    excluded_domains_in_contacts = None
-    if args.exclude_domains:
-        excluded_domains_in_contacts = [item.strip().lower() for item in args.exclude_domains]
-
     contacts = pandas.read_csv(args.input, sep=",")
     pattern_contact = re.compile("\\D{3}(\\d+)_(\\S+?)-\\D{3}(\\d+)_(.+)-(\\S+)")
     pymol.cmd.load(args.structure)
@@ -225,20 +222,20 @@ if __name__ == "__main__":
     nb_out_roi = 0
     for _, row in contacts.iterrows():
         nb_initial_contacts += row["number atoms contacts"]
-        if roi and (int(row["ROI partner position"]) < roi[0] or int(row["ROI partner position"]) > roi[1]):
+        if roi and (int(row["residue 1 position"]) < roi[0] or int(row["residue 1 position"]) > roi[1]):
             nb_out_roi += row["number atoms contacts"]
-            logging.debug(f"{row['residues in contact']}: {row['number atoms contacts']} contacts excluded because the "
-                          f"ROI partner position ({row['ROI partner position']}) is outside the Region Of Interest "
+            logging.debug(f"{row['residues contact']}: {row['number atoms contacts']} contacts excluded because the "
+                          f"residue 1 position ({row['residue 1 position']}) is outside the Region Of Interest "
                           f"limits: {args.roi}.")
             continue
-        if excluded_domains_in_contacts and row["second partner domain"].lower() in excluded_domains_in_contacts:
+        if excluded_domains_in_contacts and row["residue 2 domain"].lower() in excluded_domains_in_contacts:
             nb_excluded_contacts += row["number atoms contacts"]
             logging.debug(f"{row['residues contact']}: {row['number atoms contacts']} contacts excluded because the second "
-                          f"partner domain ({row['second partner domain']}) is in the list of the excluded domains.")
+                          f"partner domain ({row['residue 2 domain']}) is in the list of the excluded domains.")
             continue
         # change the representation of the two residues which atoms are in contact to licorice
         logging.debug(f"contact added: {row}")
-        pymol.cmd.select("tmp", f"resi {row['ROI partner position']} or resi {row['second partner position']}")
+        pymol.cmd.select("tmp", f"resi {row['residue 1 position']} or resi {row['residue 2 position']}")
         pymol.cmd.show(representation="licorice", selection="tmp")
         pymol.cmd.delete("tmp")
         # create the contact
@@ -249,10 +246,10 @@ if __name__ == "__main__":
             sys.exit(1)
         nb_validated_residues_pairs += 1
     if nb_out_roi != 0:
-        logging.warning(f"{nb_out_roi} contacts excluded because the ROI partner position was outside of the Region Of "
+        logging.warning(f"{nb_out_roi} contacts excluded because the residue 1 position was outside of the Region Of "
                         f"Interest limits: {args.roi}")
     if nb_excluded_contacts != 0:
-        logging.warning(f"{nb_excluded_contacts} contacts excluded because the second partner domain was one of the "
+        logging.warning(f"{nb_excluded_contacts} contacts excluded because the residue 2 domain was one of the "
                         f"excluded domains: {', '.join(excluded_domains_in_contacts)}.")
     logging.info(f"{nb_validated_contacts}/{nb_initial_contacts} contacts added for "
                  f"{nb_validated_residues_pairs}/{len(contacts)} pairs of residues.")
