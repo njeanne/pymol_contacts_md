@@ -77,17 +77,18 @@ def extract_roi(roi_to_extract):
     return roi_extracted
 
 
-def create_contact(atoms_contacts, pattern):
+def create_contact(atoms_contacts):
     """
     Create the contact between the two atoms of the residues.
 
     :param atoms_contacts: The atoms' contacts.
     :type atoms_contacts: str
-    :param pattern: the pattern of the contact.
-    :type pattern: re.pattern
     :return: the number of contacts added.
     :rtype: int
     """
+    pattern = re.compile("\\D{3}(\\d+)_(\\S+?)-\\D{3}(\\d+)_(.+)")
+    # if the atom 2 belongs to a hydrogen bond, the notation will be atom2-hydrogen_donor
+    pattern_atom2 = re.compile("([A-Z0-9]+)-([A-Z0-9]+)")
     number_contacts = 0
     for atom_contact in atoms_contacts.split(" | "):
         match = pattern.search(atom_contact)
@@ -95,34 +96,46 @@ def create_contact(atoms_contacts, pattern):
             resi_1 = match.group(1)
             atom_1 = match.group(2)
             resi_2 = match.group(3)
-            atom_2_second = match.group(4)
-            atom_2_first = match.group(5)
+            atom_2_tmp = match.group(4)
+            hydrogen_atom_from_hbond = None
+            match_atom2 = pattern_atom2.search(atom_2_tmp)
+            if match_atom2:
+                # atom 2 from hydrogen bonds analysis
+                atom_2 = match_atom2.group(1)
+                hydrogen_atom_from_hbond = match_atom2.group(2)
+            else:
+                # atom 2 not from hydrogen bonds analysis
+                atom_2 = atom_2_tmp
         else:
             raise(Exception(f"No match in {atom_contact} for '{pattern.pattern}'."))
         downgraded_contact = False
         p1 = pymol.cmd.select("p1", f"(resi {resi_1} and name {atom_1})")
-        p2 = pymol.cmd.select("p2", f"(resi {resi_2} and name {atom_2_first})")
+        p2 = pymol.cmd.select("p2", f"(resi {resi_2} and name {atom_2})")
         if p1 != 1:
-            raise Exception(f"create_contact function on {atom_contact}: PyMol command for p2 selection on "
+            raise Exception(f"create_contact function on {atom_contact}: PyMol command for p1 selection on "
                             f"{resi_1}_{atom_1} failed (select resi {resi_1} and name {atom_1}).")
         if p2 != 1:
-            downgraded_contact = True
-            logging.warning(f"create_contact function on {atom_contact}: PyMol command for p2 selection on "
-                            f"{resi_2}_{atom_2_first} failed (select resi {resi_2} and name {atom_2_first}), trying on "
-                            f"{resi_2}_{atom_2_second}.")
-            p2_sel_str = f"(resi {resi_2} and name {atom_2_second})"
-            p2 = pymol.cmd.select("p2", p2_sel_str)
-            if p2 != 1:
-                raise Exception(f"create_contact function on {atom_contact}: PyMol commands for p2 selection failed:\n"
-                                f"select resi {resi_2} and name {atom_2_first}\n"
-                                f"select resi {resi_2} and name {atom_2_second}")
+            if hydrogen_atom_from_hbond:
+                downgraded_contact = True
+                logging.warning(f"create_contact function on {atom_contact}: PyMol command for p2 selection on "
+                                f"{resi_2}_{atom_2} failed (select resi {resi_2} and name {atom_2}), trying on "
+                                f"{resi_2}_{hydrogen_atom_from_hbond}.")
+                p2_sel_str = f"(resi {resi_2} and name {hydrogen_atom_from_hbond})"
+                p2 = pymol.cmd.select("p2", p2_sel_str)
+                if p2 != 1:
+                    raise Exception(f"create_contact function on {atom_contact}: PyMol commands for p2 selection "
+                                    f"failed:\nselect resi {resi_2} and name {hydrogen_atom_from_hbond}\nselect resi "
+                                    f"{resi_2} and name {hydrogen_atom_from_hbond}")
+            else:
+                raise Exception(f"create_contact function on {atom_contact}: PyMol commands for p2 selection "
+                                f"failed:\nselect resi {resi_2} and name {atom_2}.")
         pymol.cmd.distance(atom_contact, "p1", "p2")
         pymol.cmd.hide("labels", atom_contact)
         if downgraded_contact:
             pymol.cmd.color("red", atom_contact)
-            logging.warning(f"{atom_contact}: Downgraded contact between '{resi_1}_{atom_1} and "
-                            f"{resi_2}_{atom_2_second}' instead of '{resi_1}_{atom_1} and {resi_2}_{atom_2_first}' set "
-                            f"to red color instead of yellow.")
+            logging.warning(f"{atom_contact}: Downgraded contact between \"{resi_1}_{atom_1} and "
+                            f"{resi_2}_{hydrogen_atom_from_hbond}\" instead of \"{resi_1}_{atom_1} and "
+                            f"{resi_2}_{atom_2}\" set to red color instead of yellow.")
         pymol.cmd.delete("p1")
         pymol.cmd.delete("p2")
         number_contacts += 1
@@ -198,7 +211,6 @@ if __name__ == "__main__":
             sys.exit(1)
 
     contacts = pandas.read_csv(args.input, sep=",")
-    pattern_contact = re.compile("\\D{3}(\\d+)_(\\S+?)-\\D{3}(\\d+)_(.+)-(\\S+)")
     pymol.cmd.load(args.structure)
     # set the protein to white color
     pymol.cmd.color("white", "all")
@@ -253,7 +265,7 @@ if __name__ == "__main__":
         pymol.cmd.delete("tmp")
         # create the contact
         try:
-            nb_validated_contacts += create_contact(row["atoms contacts"], pattern_contact)
+            nb_validated_contacts += create_contact(row["atoms contacts"])
         except Exception as exc:
             logging.error(exc, exc_info=True)
             sys.exit(1)
